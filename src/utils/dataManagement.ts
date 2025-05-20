@@ -33,6 +33,138 @@ export interface PortfolioItem {
   portfolioName: string;
 }
 
+export interface ApiConfig {
+  apiKey: string;
+  endpoint: string;
+  enabled: boolean;
+}
+
+// API configuration management
+export function saveApiConfig(config: ApiConfig): ApiConfig {
+  localStorage.setItem('apiConfig', JSON.stringify(config));
+  return config;
+}
+
+export function getApiConfig(): ApiConfig {
+  const storedConfig = localStorage.getItem('apiConfig');
+  return storedConfig 
+    ? JSON.parse(storedConfig) 
+    : { apiKey: '', endpoint: 'https://api.example.com/v1', enabled: false };
+}
+
+// Function to fetch stock data from API
+export async function fetchStockDataFromApi(symbol: string): Promise<Partial<StockData> | null> {
+  const config = getApiConfig();
+  
+  if (!config.enabled || !config.apiKey) {
+    console.log('API is not enabled or API key is missing');
+    return null;
+  }
+  
+  try {
+    const response = await fetch(`${config.endpoint}/stock/${symbol}?apiKey=${config.apiKey}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      symbol: data.symbol,
+      price: parseFloat(data.price),
+      volume: parseInt(data.volume),
+      date: data.lastTradeDate || new Date().toISOString().split('T')[0],
+      name: data.companyName
+    };
+  } catch (error) {
+    console.error('Error fetching stock data:', error);
+    return null;
+  }
+}
+
+// Function to fetch option data from API
+export async function fetchOptionDataFromApi(
+  stockSymbol: string, 
+  strikePrice: number,
+  expirationDate: string,
+  optionType: "call" | "put"
+): Promise<Partial<OptionData> | null> {
+  const config = getApiConfig();
+  
+  if (!config.enabled || !config.apiKey) {
+    console.log('API is not enabled or API key is missing');
+    return null;
+  }
+  
+  try {
+    const response = await fetch(
+      `${config.endpoint}/options/${stockSymbol}?strike=${strikePrice}&expiration=${expirationDate}&type=${optionType}&apiKey=${config.apiKey}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      stockSymbol,
+      strikePrice,
+      expirationDate,
+      optionType,
+      marketPrice: parseFloat(data.lastPrice),
+      impliedVolatility: parseFloat(data.impliedVolatility),
+      delta: parseFloat(data.delta),
+      gamma: parseFloat(data.gamma),
+      theta: parseFloat(data.theta),
+      vega: parseFloat(data.vega),
+      rho: parseFloat(data.rho)
+    };
+  } catch (error) {
+    console.error('Error fetching option data:', error);
+    return null;
+  }
+}
+
+// Function to update portfolio prices from API
+export async function updatePortfolioPricesFromApi(): Promise<PortfolioItem[]> {
+  const portfolioItems = getPortfolioItems();
+  const config = getApiConfig();
+  
+  if (!config.enabled || !config.apiKey || portfolioItems.length === 0) {
+    return portfolioItems;
+  }
+  
+  try {
+    // Get unique symbols to minimize API calls
+    const symbols = [...new Set(portfolioItems.map(item => item.symbol))];
+    const symbolData: Record<string, number> = {};
+    
+    // Fetch current prices for all symbols
+    for (const symbol of symbols) {
+      const stockData = await fetchStockDataFromApi(symbol);
+      if (stockData && stockData.price) {
+        symbolData[symbol] = stockData.price;
+      }
+    }
+    
+    // Update portfolio items with current prices
+    const updatedItems = portfolioItems.map(item => ({
+      ...item,
+      currentPrice: symbolData[item.symbol] || item.currentPrice || item.purchasePrice
+    }));
+    
+    // Save updated portfolio items
+    localStorage.setItem('portfolioData', JSON.stringify(updatedItems));
+    
+    return updatedItems;
+  } catch (error) {
+    console.error('Error updating portfolio prices:', error);
+    return portfolioItems;
+  }
+}
+
 // In a real application, this would be an API call
 // For now, we'll use localStorage to simulate data persistence
 export function saveStockData(data: StockData): StockData {
@@ -190,3 +322,4 @@ export const exportToCSV = (dataType: 'stock' | 'option' | 'portfolio'): string 
   const rows = data.map(item => Object.values(item).join(','));
   return [headers, ...rows].join('\n');
 };
+
