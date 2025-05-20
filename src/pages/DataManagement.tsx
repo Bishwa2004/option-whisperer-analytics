@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getStockData, addStockData, getOptionData, addOptionData, importData, exportData } from "@/utils/dataManagement";
+import { getStockData, addStockData, getOptionData, addOptionData, importData, exportData, deleteStockData, deleteOptionData } from "@/utils/dataManagement";
 import { toast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowUpDown, Plus, Download, Upload, Trash } from "lucide-react";
@@ -27,7 +27,7 @@ const DataManagement = () => {
   // Option form state
   const [optionSymbol, setOptionSymbol] = useState("");
   const [optionStockSymbol, setOptionStockSymbol] = useState("");
-  const [optionType, setOptionType] = useState("call");
+  const [optionType, setOptionType] = useState<"call" | "put">("call"); // Changed type to "call" | "put"
   const [strikePrice, setStrikePrice] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
   const [marketPrice, setMarketPrice] = useState("");
@@ -132,7 +132,7 @@ const DataManagement = () => {
     const newOption = {
       symbol: optionSymbol || `${optionStockSymbol}${optionType.charAt(0).toUpperCase()}${strikePrice}`,
       stockSymbol: optionStockSymbol,
-      optionType: optionType,
+      optionType: optionType, // This is now correctly typed as "call" | "put"
       strikePrice: parseFloat(strikePrice),
       expirationDate: expirationDate,
       marketPrice: parseFloat(marketPrice),
@@ -192,6 +192,19 @@ const DataManagement = () => {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleDelete = (id: string, type: 'stock' | 'option') => {
+    if (type === 'stock') {
+      deleteStockData(id);
+    } else {
+      deleteOptionData(id);
+    }
+    refreshData();
+    toast({
+      title: `${type === 'stock' ? 'Stock' : 'Option'} Deleted`,
+      description: `The ${type} has been removed from your data.`
+    });
   };
 
   return (
@@ -381,6 +394,7 @@ const DataManagement = () => {
                             variant="ghost" 
                             size="icon"
                             className="h-8 w-8 text-destructive"
+                            onClick={() => handleDelete(stock.id, 'stock')}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
@@ -435,7 +449,7 @@ const DataManagement = () => {
                   <select
                     id="optionType"
                     value={optionType}
-                    onChange={(e) => setOptionType(e.target.value)}
+                    onChange={(e) => setOptionType(e.target.value as "call" | "put")} // Cast to the correct type
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="call">Call</option>
@@ -620,6 +634,7 @@ const DataManagement = () => {
                             variant="ghost" 
                             size="icon"
                             className="h-8 w-8 text-destructive"
+                            onClick={() => handleDelete(option.id, 'option')}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
