@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PieChart, BarChart } from "@/components/ui/charts";
+import { BarChart } from "@/components/ui/charts";
 import { PlusCircle, Trash, PieChart as PieChartIcon, BarChartIcon, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { PortfolioItem, addPortfolioItem, getPortfolioItems, deletePortfolioItem } from "@/utils/dataManagement";
@@ -331,10 +331,11 @@ const Portfolio = () => {
             </CardHeader>
             <CardContent className="h-80">
               {portfolioItems.length > 0 ? (
-                <PieChart
+                <BarChart
                   data={allocationData}
                   index="name"
-                  category="value"
+                  categories={["value"]}
+                  colors={["blue"]}
                   valueFormatter={(value) => `$${value.toFixed(2)}`}
                   className="h-full"
                 />
@@ -359,7 +360,7 @@ const Portfolio = () => {
                   data={performanceData}
                   index="name"
                   categories={["value"]}
-                  colors={["blue"]}
+                  colors={[portfolioPerformance >= 0 ? "green" : "red"]}
                   valueFormatter={(value) => `${value.toFixed(2)}%`}
                   className="h-full"
                 />
