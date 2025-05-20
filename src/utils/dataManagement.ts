@@ -65,12 +65,18 @@ export function deleteOptionData(id: string): boolean {
 
 // Adding the missing function that was causing the error
 export function addOptionData(data: Partial<OptionData>): OptionData {
+  // Ensure optionType is either "call" or "put"
+  let optionType: "call" | "put" = "call";
+  if (data.optionType === "put") {
+    optionType = "put";
+  }
+  
   const newOption: OptionData = {
     id: crypto.randomUUID(),
     stockSymbol: data.stockSymbol || '',
     strikePrice: data.strikePrice || 0,
     expirationDate: data.expirationDate || '',
-    optionType: data.optionType || 'call',
+    optionType: optionType,
     marketPrice: data.marketPrice || 0,
     impliedVolatility: data.impliedVolatility,
     delta: data.delta,

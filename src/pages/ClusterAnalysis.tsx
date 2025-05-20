@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getStockData, getOptionData } from "@/utils/dataManagement";
-import { performKMeansClustering } from "@/utils/clustering";
+import { kMeansClustering, DataPoint } from "@/utils/clustering";
 import { ScatterChart } from "@/components/ui/charts";
 
 const ClusterAnalysis = () => {
@@ -30,14 +31,16 @@ const ClusterAnalysis = () => {
       return;
     }
 
-    const numericalData = optionData.map(option => ({
+    // Map option data to the DataPoint format expected by kMeansClustering
+    const dataPoints: DataPoint[] = optionData.map(option => ({
+      x: parseFloat(option[xAxis]) || 0,
+      y: parseFloat(option[yAxis]) || 0,
       id: option.id,
-      [xAxis]: parseFloat(option[xAxis]),
-      [yAxis]: parseFloat(option[yAxis]),
+      originalData: option
     }));
 
-    const filteredData = numericalData.filter(
-      (item) => !isNaN(item[xAxis]) && !isNaN(item[yAxis])
+    const filteredData = dataPoints.filter(
+      (item) => !isNaN(item.x) && !isNaN(item.y)
     );
 
     if (filteredData.length !== optionData.length) {
@@ -50,8 +53,24 @@ const ClusterAnalysis = () => {
     }
 
     try {
-      const clusteringResult = performKMeansClustering(filteredData, numClusters, xAxis, yAxis);
-      setClusters(clusteringResult);
+      // Use kMeansClustering directly
+      const clusterResults = kMeansClustering(filteredData, numClusters);
+      
+      // Transform the cluster results into a format suitable for the ScatterChart
+      const transformedClusters = [];
+      
+      clusterResults.forEach((cluster, clusterIndex) => {
+        cluster.points.forEach(point => {
+          transformedClusters.push({
+            id: point.id,
+            [xAxis]: point.x,
+            [yAxis]: point.y,
+            cluster: clusterIndex.toString()
+          });
+        });
+      });
+      
+      setClusters(transformedClusters);
     } catch (error) {
       console.error("Clustering error:", error);
       alert("Error occurred during clustering. Check console for details.");
@@ -124,10 +143,10 @@ const ClusterAnalysis = () => {
             <div className="w-full">
               <ScatterChart
                 data={clusters}
-                index="id"
+                index="cluster"
+                categories={[...new Set(clusters.map(item => item.cluster))]}
                 xAxisKey={xAxis}
                 yAxisKey={yAxis}
-                categories={clusters.map((c) => c.cluster.toString())}
                 colors={["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"]}
                 className="h-[600px]"
               />
