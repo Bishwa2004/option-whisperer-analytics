@@ -1,3 +1,4 @@
+
 export interface StockData {
   id: string;
   symbol: string;
@@ -20,6 +21,16 @@ export interface OptionData {
   theta?: number;
   vega?: number;
   rho?: number;
+}
+
+export interface PortfolioItem {
+  id: string;
+  symbol: string;
+  quantity: number;
+  purchasePrice: number;
+  purchaseDate: string;
+  currentPrice?: number;
+  portfolioName: string;
 }
 
 // In a real application, this would be an API call
@@ -62,6 +73,40 @@ export function deleteOptionData(id: string): boolean {
   return true;
 }
 
+// Portfolio management functions
+export function savePortfolioItem(data: PortfolioItem): PortfolioItem {
+  const existingData = getPortfolioItems();
+  const updatedData = [...existingData.filter(item => item.id !== data.id), data];
+  localStorage.setItem('portfolioData', JSON.stringify(updatedData));
+  return data;
+}
+
+export function getPortfolioItems(): PortfolioItem[] {
+  const storedData = localStorage.getItem('portfolioData');
+  return storedData ? JSON.parse(storedData) : [];
+}
+
+export function deletePortfolioItem(id: string): boolean {
+  const existingData = getPortfolioItems();
+  const updatedData = existingData.filter(item => item.id !== id);
+  localStorage.setItem('portfolioData', JSON.stringify(updatedData));
+  return true;
+}
+
+export function addPortfolioItem(data: Partial<PortfolioItem>): PortfolioItem {
+  const newItem: PortfolioItem = {
+    id: crypto.randomUUID(),
+    symbol: data.symbol || '',
+    quantity: data.quantity || 0,
+    purchasePrice: data.purchasePrice || 0,
+    purchaseDate: data.purchaseDate || new Date().toISOString().split('T')[0],
+    currentPrice: data.currentPrice || data.purchasePrice,
+    portfolioName: data.portfolioName || 'Default Portfolio'
+  };
+  
+  return savePortfolioItem(newItem);
+}
+
 // Updated function to properly handle optionType as "call" | "put"
 export function addOptionData(data: Partial<OptionData>): OptionData {
   // Ensure optionType is either "call" or "put"
@@ -101,13 +146,16 @@ export function addStockData(data: Partial<StockData>): StockData {
   return saveStockData(newStock);
 }
 
-export function importData(data: any[], dataType: 'stock' | 'option'): any[] {
+export function importData(data: any[], dataType: 'stock' | 'option' | 'portfolio'): any[] {
   if (dataType === 'stock') {
     const stockData = data.map(item => addStockData(item));
     return stockData;
-  } else {
+  } else if (dataType === 'option') {
     const optionData = data.map(item => addOptionData(item));
     return optionData;
+  } else {
+    const portfolioData = data.map(item => addPortfolioItem(item));
+    return portfolioData;
   }
 }
 
@@ -128,8 +176,16 @@ export function exportData(data: any[], filename: string): void {
 }
 
 export const importFromCSV = importData;
-export const exportToCSV = (dataType: 'stock' | 'option'): string => {
-  const data = dataType === 'stock' ? getStockData() : getOptionData();
+export const exportToCSV = (dataType: 'stock' | 'option' | 'portfolio'): string => {
+  let data;
+  if (dataType === 'stock') {
+    data = getStockData();
+  } else if (dataType === 'option') {
+    data = getOptionData();
+  } else {
+    data = getPortfolioItems();
+  }
+  
   const headers = data.length > 0 ? Object.keys(data[0]).join(',') : '';
   const rows = data.map(item => Object.values(item).join(','));
   return [headers, ...rows].join('\n');

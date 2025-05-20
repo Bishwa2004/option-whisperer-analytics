@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import OptionsCalculator from "./pages/OptionsCalculator";
 import DataManagement from "./pages/DataManagement";
 import ClusterAnalysis from "./pages/ClusterAnalysis";
+import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/options-calculator" element={<OptionsCalculator />} />
             <Route path="/data-management" element={<DataManagement />} />
             <Route path="/cluster-analysis" element={<ClusterAnalysis />} />
+            <Route path="/portfolio" element={<Portfolio />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
