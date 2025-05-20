@@ -1,8 +1,6 @@
-
-// Update imports in OptionsCalculator.tsx
 import React from "react";
 import { useState, useEffect } from "react";
-import { calculateOptionPrice, calculateGreeks } from "@/utils/optionsCalculations";
+import { calculateBlackScholes, calculateGreeks } from "@/utils/optionsCalculations";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,12 +36,12 @@ const OptionsCalculator = () => {
 
     try {
       // Calculate option price using Black-Scholes
-      const price = calculateOptionPrice(
+      const price = calculateBlackScholes(
         parseFloat(stockPrice),
         parseFloat(strikePrice),
         parseFloat(timeToExpiration),
-        parseFloat(riskFreeRate) / 100, // Convert percentage to decimal
         parseFloat(impliedVolatility) / 100, // Convert percentage to decimal
+        parseFloat(riskFreeRate) / 100, // Convert percentage to decimal
         optionType
       );
 
@@ -68,12 +66,12 @@ const OptionsCalculator = () => {
       const step = (maxPrice - minPrice) / 20;
 
       for (let price = minPrice; price <= maxPrice; price += step) {
-        const optionPrice = calculateOptionPrice(
+        const optionPrice = calculateBlackScholes(
           price,
           parseFloat(strikePrice),
           parseFloat(timeToExpiration),
-          parseFloat(riskFreeRate) / 100,
           parseFloat(impliedVolatility) / 100,
+          parseFloat(riskFreeRate) / 100,
           optionType
         );
 

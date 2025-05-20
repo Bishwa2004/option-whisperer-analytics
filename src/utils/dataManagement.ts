@@ -1,4 +1,3 @@
-
 export interface StockData {
   id: string;
   symbol: string;
@@ -63,7 +62,7 @@ export function deleteOptionData(id: string): boolean {
   return true;
 }
 
-// Adding the missing function that was causing the error
+// Updated function to properly handle optionType as "call" | "put"
 export function addOptionData(data: Partial<OptionData>): OptionData {
   // Ensure optionType is either "call" or "put"
   let optionType: "call" | "put" = "call";
@@ -89,7 +88,6 @@ export function addOptionData(data: Partial<OptionData>): OptionData {
   return saveOptionData(newOption);
 }
 
-// Adding the missing function used in DataManagement.tsx
 export function addStockData(data: Partial<StockData>): StockData {
   const newStock: StockData = {
     id: crypto.randomUUID(),
@@ -103,7 +101,6 @@ export function addStockData(data: Partial<StockData>): StockData {
   return saveStockData(newStock);
 }
 
-// Function to import data from CSV - replacing the existing importFromCSV function
 export function importData(data: any[], dataType: 'stock' | 'option'): any[] {
   if (dataType === 'stock') {
     const stockData = data.map(item => addStockData(item));
@@ -114,7 +111,6 @@ export function importData(data: any[], dataType: 'stock' | 'option'): any[] {
   }
 }
 
-// Function to export data - renamed from exportToCSV
 export function exportData(data: any[], filename: string): void {
   const jsonString = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
@@ -131,7 +127,6 @@ export function exportData(data: any[], filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-// Adding these for backward compatibility
 export const importFromCSV = importData;
 export const exportToCSV = (dataType: 'stock' | 'option'): string => {
   const data = dataType === 'stock' ? getStockData() : getOptionData();
