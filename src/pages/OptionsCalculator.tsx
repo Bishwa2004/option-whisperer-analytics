@@ -1,3 +1,4 @@
+
 // Update imports in OptionsCalculator.tsx
 import React from "react";
 import { useState, useEffect } from "react";
@@ -18,9 +19,9 @@ const OptionsCalculator = () => {
   const [timeToExpiration, setTimeToExpiration] = useState("");
   const [riskFreeRate, setRiskFreeRate] = useState("");
   const [impliedVolatility, setImpliedVolatility] = useState("");
-  const [optionType, setOptionType] = useState("call");
-  const [calculationResult, setCalculationResult] = useState(null);
-  const [greeks, setGreeks] = useState(null);
+  const [optionType, setOptionType] = useState<"call" | "put">("call");
+  const [calculationResult, setCalculationResult] = useState<{ optionPrice: number } | null>(null);
+  const [greeks, setGreeks] = useState<any>(null);
   const [chartData, setChartData] = useState([]);
   const [stockSymbol, setStockSymbol] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
