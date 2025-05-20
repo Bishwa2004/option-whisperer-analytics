@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AreaChart, LineChart, BarChart } from "@/components/ui/chart";
+import { AreaChart, LineChart, BarChart } from "@/components/ui/charts";
 import { getStockData, getOptionData } from "@/utils/dataManagement";
 import { calculateBlackScholes, calculateGreeks } from "@/utils/optionsCalculations";
 import { Link } from "react-router-dom";

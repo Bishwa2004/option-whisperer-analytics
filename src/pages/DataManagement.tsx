@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,266 +5,193 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  getStockData, 
-  getOptionData, 
-  saveStockData, 
-  saveOptionData,
-  deleteStockData,
-  deleteOptionData,
-  importFromCSV,
-  exportToCSV
-} from "@/utils/dataManagement";
-import { 
-  Download, 
-  Upload, 
-  Trash2, 
-  Plus,
-  Search,
-  FileText
-} from "lucide-react";
-
-interface StockFormData {
-  id: string;
-  symbol: string;
-  date: string;
-  price: number;
-  volume: number;
-  [key: string]: any;
-}
-
-interface OptionFormData {
-  id: string;
-  stockSymbol: string;
-  strikePrice: number;
-  expirationDate: string;
-  optionType: "call" | "put";
-  marketPrice: number;
-}
+import { getStockData, addStockData, getOptionData, addOptionData, importData, exportData } from "@/utils/dataManagement";
+import { toast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowUpDown, Plus, Download, Upload, Trash } from "lucide-react";
 
 const DataManagement = () => {
-  const { toast } = useToast();
-  const [stockData, setStockData] = useState<StockFormData[]>([]);
-  const [optionData, setOptionData] = useState<OptionFormData[]>([]);
-  const [stockFormData, setStockFormData] = useState<StockFormData>({
-    id: crypto.randomUUID(),
-    symbol: "",
-    date: new Date().toISOString().split("T")[0],
-    price: 0,
-    volume: 0,
-  });
-  const [optionFormData, setOptionFormData] = useState<OptionFormData>({
-    id: crypto.randomUUID(),
-    stockSymbol: "",
-    strikePrice: 0,
-    expirationDate: new Date().toISOString().split("T")[0],
-    optionType: "call",
-    marketPrice: 0,
-  });
-  const [fileContent, setFileContent] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("stocks");
+  const [stockData, setStockData] = useState<any[]>([]);
+  const [optionData, setOptionData] = useState<any[]>([]);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // Stock form state
+  const [stockSymbol, setStockSymbol] = useState("");
+  const [stockName, setStockName] = useState("");
+  const [stockPrice, setStockPrice] = useState("");
+  const [stockVolume, setStockVolume] = useState("");
+  const [stockDate, setStockDate] = useState("");
+  
+  // Option form state
+  const [optionSymbol, setOptionSymbol] = useState("");
+  const [optionStockSymbol, setOptionStockSymbol] = useState("");
+  const [optionType, setOptionType] = useState("call");
+  const [strikePrice, setStrikePrice] = useState("");
+  const [expirationDate, setExpirationDate] = useState("");
+  const [marketPrice, setMarketPrice] = useState("");
+  const [impliedVolatility, setImpliedVolatility] = useState("");
 
-  // Load data on component mount
-  useEffect(() => {
-    refreshData();
-  }, []);
-
-  // Refresh data from storage
   const refreshData = () => {
     setStockData(getStockData());
     setOptionData(getOptionData());
   };
 
-  // Filter data based on search term
-  const filteredStockData = stockData.filter(
-    (stock) => stock.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    refreshData();
+  }, []);
 
-  const filteredOptionData = optionData.filter(
-    (option) => option.stockSymbol.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Handle stock form input changes
-  const handleStockFormChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: keyof StockFormData
-  ) => {
-    const value = field === "symbol" ? e.target.value : parseFloat(e.target.value);
-    setStockFormData({ ...stockFormData, [field]: value });
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
   };
 
-  // Handle option form input changes
-  const handleOptionFormChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: keyof OptionFormData
-  ) => {
-    const value =
-      field === "stockSymbol" || field === "expirationDate"
-        ? e.target.value
-        : parseFloat(e.target.value);
-    setOptionFormData({ ...optionFormData, [field]: value });
-  };
+  const sortedStockData = [...stockData].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    const aValue = a[sortColumn];
+    const bValue = b[sortColumn];
+    
+    if (typeof aValue === "string") {
+      return sortDirection === "asc" 
+        ? aValue.localeCompare(bValue) 
+        : bValue.localeCompare(aValue);
+    }
+    
+    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+  });
 
-  // Handle option type select change
-  const handleOptionTypeChange = (value: "call" | "put") => {
-    setOptionFormData({ ...optionFormData, optionType: value });
-  };
+  const sortedOptionData = [...optionData].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    const aValue = a[sortColumn];
+    const bValue = b[sortColumn];
+    
+    if (typeof aValue === "string") {
+      return sortDirection === "asc" 
+        ? aValue.localeCompare(bValue) 
+        : bValue.localeCompare(aValue);
+    }
+    
+    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+  });
 
-  // Add stock data
-  const addStockData = () => {
-    if (stockFormData.symbol === "" || stockFormData.price <= 0) {
+  const handleAddStock = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!stockSymbol || !stockName || !stockPrice) {
       toast({
         variant: "destructive",
-        title: "Invalid Input",
-        description: "Please enter a valid symbol and price.",
+        title: "Validation Error",
+        description: "Please fill in all required fields."
       });
       return;
     }
-
-    saveStockData(stockFormData);
+    
+    const newStock = {
+      symbol: stockSymbol,
+      name: stockName,
+      price: parseFloat(stockPrice),
+      volume: stockVolume ? parseInt(stockVolume) : 0,
+      date: stockDate || new Date().toISOString().split('T')[0]
+    };
+    
+    addStockData(newStock);
     refreshData();
-    setStockFormData({
-      id: crypto.randomUUID(),
-      symbol: "",
-      date: new Date().toISOString().split("T")[0],
-      price: 0,
-      volume: 0,
-    });
-
+    
+    // Reset form
+    setStockSymbol("");
+    setStockName("");
+    setStockPrice("");
+    setStockVolume("");
+    setStockDate("");
+    
     toast({
-      title: "Stock Data Added",
-      description: `Added ${stockFormData.symbol} data successfully.`,
+      title: "Stock Added",
+      description: `${newStock.symbol} has been added to your data.`
     });
   };
 
-  // Add option data
-  const addOptionData = () => {
-    if (
-      optionFormData.stockSymbol === "" ||
-      optionFormData.strikePrice <= 0 ||
-      optionFormData.marketPrice <= 0
-    ) {
+  const handleAddOption = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!optionStockSymbol || !strikePrice || !expirationDate || !marketPrice) {
       toast({
         variant: "destructive",
-        title: "Invalid Input",
-        description: "Please enter valid option data.",
+        title: "Validation Error",
+        description: "Please fill in all required fields."
       });
       return;
     }
-
-    saveOptionData(optionFormData);
+    
+    const newOption = {
+      symbol: optionSymbol || `${optionStockSymbol}${optionType.charAt(0).toUpperCase()}${strikePrice}`,
+      stockSymbol: optionStockSymbol,
+      optionType: optionType,
+      strikePrice: parseFloat(strikePrice),
+      expirationDate: expirationDate,
+      marketPrice: parseFloat(marketPrice),
+      impliedVolatility: impliedVolatility ? parseFloat(impliedVolatility) / 100 : undefined
+    };
+    
+    addOptionData(newOption);
     refreshData();
-    setOptionFormData({
-      id: crypto.randomUUID(),
-      stockSymbol: "",
-      strikePrice: 0,
-      expirationDate: new Date().toISOString().split("T")[0],
-      optionType: "call",
-      marketPrice: 0,
-    });
-
+    
+    // Reset form
+    setOptionSymbol("");
+    setOptionStockSymbol("");
+    setOptionType("call");
+    setStrikePrice("");
+    setExpirationDate("");
+    setMarketPrice("");
+    setImpliedVolatility("");
+    
     toast({
-      title: "Option Data Added",
-      description: `Added ${optionFormData.stockSymbol} option data successfully.`,
+      title: "Option Added",
+      description: `${newOption.symbol} has been added to your data.`
     });
   };
 
-  // Delete stock data
-  const removeStockData = (id: string) => {
-    deleteStockData(id);
-    refreshData();
+  const handleExport = () => {
+    const data = activeTab === "stocks" ? stockData : optionData;
+    const filename = `${activeTab}_data_${new Date().toISOString().split('T')[0]}.json`;
+    exportData(data, filename);
+    
     toast({
-      title: "Stock Data Deleted",
-      description: "The stock data has been removed.",
+      title: "Export successful",
+      description: `${activeTab} data has been exported to ${filename}.`
     });
   };
 
-  // Delete option data
-  const removeOptionData = (id: string) => {
-    deleteOptionData(id);
-    refreshData();
-    toast({
-      title: "Option Data Deleted",
-      description: "The option data has been removed.",
-    });
-  };
-
-  // Handle file upload for import
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleImport = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setFileContent(content);
+      if (e.target?.result) {
+        try {
+          const data = JSON.parse(e.target.result as string);
+          const importedData = importData(data, activeTab === "stocks" ? "stock" : "option");
+          if (importedData) {
+            refreshData();
+            toast({
+              title: "Import successful",
+              description: `${importedData.length} ${activeTab} imported successfully.`
+            });
+          }
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "Import failed",
+            description: "The file format is not valid."
+          });
+        }
+      }
     };
     reader.readAsText(file);
-  };
-
-  // Import data from CSV
-  const handleImport = (dataType: "stock" | "option") => {
-    if (!fileContent) {
-      toast({
-        variant: "destructive",
-        title: "No File Selected",
-        description: "Please select a CSV file to import.",
-      });
-      return;
-    }
-
-    try {
-      importFromCSV(fileContent, dataType);
-      refreshData();
-      setFileContent("");
-
-      toast({
-        title: "Data Imported",
-        description: `Successfully imported ${dataType} data.`,
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Import Failed",
-        description: "There was an error importing the data. Check your file format.",
-      });
-    }
-  };
-
-  // Export data to CSV
-  const handleExport = (dataType: "stock" | "option") => {
-    const csvContent = exportToCSV(dataType);
-    if (!csvContent) {
-      toast({
-        variant: "destructive",
-        title: "No Data to Export",
-        description: `There is no ${dataType} data to export.`,
-      });
-      return;
-    }
-
-    // Create a blob and download link
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${dataType}_data.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "Data Exported",
-      description: `${dataType} data has been exported as a CSV file.`,
-    });
-  };
-
-  // Clear sample data
-  const clearSampleData = () => {
-    const data = dataType === "stock" ? getStockData() : getOptionData();
   };
 
   return (
@@ -273,348 +199,442 @@ const DataManagement = () => {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Data Management</h1>
         <p className="text-muted-foreground">
-          Manage your stock and options data for analysis
+          Manage your stock and options data for analysis.
         </p>
       </div>
 
-      <div className="flex justify-between items-center">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by symbol..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-[250px]"
-          />
-        </div>
-        <div className="flex gap-2">
-          <label className="cursor-pointer">
-            <Input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <Button variant="outline" asChild>
-              <span>
-                <Upload className="mr-2 h-4 w-4" />
-                Select CSV
-              </span>
-            </Button>
-          </label>
-        </div>
-      </div>
-
-      <Tabs defaultValue="stock">
-        <TabsList className="w-full">
-          <TabsTrigger value="stock" className="flex-1">
-            Stock Data
-          </TabsTrigger>
-          <TabsTrigger value="option" className="flex-1">
-            Option Data
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="stocks">Stocks</TabsTrigger>
+          <TabsTrigger value="options">Options</TabsTrigger>
         </TabsList>
-        <TabsContent value="stock" className="space-y-4">
+        
+        <TabsContent value="stocks" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Add Stock Data</CardTitle>
               <CardDescription>
-                Enter stock price and volume information
+                Enter stock information to add to your database.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="symbol">Symbol</Label>
-                  <Input
-                    id="symbol"
-                    value={stockFormData.symbol}
-                    onChange={(e) => handleStockFormChange(e, "symbol")}
+              <form onSubmit={handleAddStock} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="stockSymbol">Symbol *</Label>
+                  <Input 
+                    id="stockSymbol" 
+                    value={stockSymbol}
+                    onChange={(e) => setStockSymbol(e.target.value.toUpperCase())}
                     placeholder="AAPL"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="stockName">Name *</Label>
+                  <Input 
+                    id="stockName" 
+                    value={stockName}
+                    onChange={(e) => setStockName(e.target.value)}
+                    placeholder="Apple Inc."
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="stockPrice">Price *</Label>
+                  <Input 
+                    id="stockPrice" 
+                    type="number"
+                    step="0.01"
+                    value={stockPrice}
+                    onChange={(e) => setStockPrice(e.target.value)}
+                    placeholder="150.00"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="stockVolume">Volume</Label>
+                  <Input 
+                    id="stockVolume" 
+                    type="number"
+                    value={stockVolume}
+                    onChange={(e) => setStockVolume(e.target.value)}
+                    placeholder="1000000"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="stockDate">Date</Label>
+                  <Input 
+                    id="stockDate" 
                     type="date"
-                    value={stockFormData.date}
-                    onChange={(e) => 
-                      setStockFormData({
-                        ...stockFormData,
-                        date: e.target.value,
-                      })
-                    }
+                    value={stockDate}
+                    onChange={(e) => setStockDate(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price ($)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    value={stockFormData.price || ""}
-                    onChange={(e) => handleStockFormChange(e, "price")}
-                    min={0.01}
-                    step={0.01}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="volume">Volume</Label>
-                  <Input
-                    id="volume"
-                    type="number"
-                    value={stockFormData.volume || ""}
-                    onChange={(e) => handleStockFormChange(e, "volume")}
-                    min={0}
-                    step={1}
-                    placeholder="0"
-                  />
-                </div>
+                
                 <div className="flex items-end">
-                  <Button onClick={addStockData} className="w-full">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add
+                  <Button type="submit" className="w-full">
+                    <Plus className="mr-2 h-4 w-4" /> Add Stock
                   </Button>
                 </div>
-              </div>
-              <div className="flex justify-between mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => handleImport("stock")}
-                  disabled={!fileContent}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Import Data
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleExport("stock")}
-                  disabled={stockData.length === 0}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Data
-                </Button>
-              </div>
+              </form>
             </CardContent>
           </Card>
-
+          
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Stock Data</h2>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" /> Export
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Upload className="mr-2 h-4 w-4" /> Import
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Import Stock Data</DialogTitle>
+                    <DialogDescription>
+                      Upload a JSON file containing stock data.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Input 
+                    type="file" 
+                    accept=".json" 
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleImport(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  <DialogFooter>
+                    <DialogTrigger asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </DialogTrigger>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+          
           <Card>
-            <CardHeader>
-              <CardTitle>Stock Data</CardTitle>
-              <CardDescription>
-                Your saved stock price information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {filteredStockData.length > 0 ? (
-                <div className="border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Symbol</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Volume</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("symbol")}
+                    >
+                      Symbol {sortColumn === "symbol" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("name")}
+                    >
+                      Name {sortColumn === "name" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("price")}
+                    >
+                      Price {sortColumn === "price" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("volume")}
+                    >
+                      Volume {sortColumn === "volume" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("date")}
+                    >
+                      Date {sortColumn === "date" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedStockData.length > 0 ? (
+                    sortedStockData.map((stock) => (
+                      <TableRow key={stock.id}>
+                        <TableCell className="font-medium">{stock.symbol}</TableCell>
+                        <TableCell>{stock.name}</TableCell>
+                        <TableCell>${stock.price.toFixed(2)}</TableCell>
+                        <TableCell>{stock.volume?.toLocaleString()}</TableCell>
+                        <TableCell>{stock.date}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredStockData.map((stock) => (
-                        <TableRow key={stock.id}>
-                          <TableCell className="font-medium">
-                            {stock.symbol}
-                          </TableCell>
-                          <TableCell>{stock.date}</TableCell>
-                          <TableCell>${stock.price.toFixed(2)}</TableCell>
-                          <TableCell>
-                            {stock.volume.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeStockData(stock.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  {searchTerm ? 
-                    "No matching stock data found" : 
-                    "No stock data available. Add some data above."
-                  }
-                </div>
-              )}
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                        No stock data available. Add some stocks above.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="option" className="space-y-4">
+        
+        <TabsContent value="options" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Add Option Data</CardTitle>
               <CardDescription>
-                Enter options contract information
+                Enter option contract information to add to your database.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="stockSymbol">Stock Symbol</Label>
-                  <Input
-                    id="stockSymbol"
-                    value={optionFormData.stockSymbol}
-                    onChange={(e) => handleOptionFormChange(e, "stockSymbol")}
+              <form onSubmit={handleAddOption} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="optionSymbol">Option Symbol (Optional)</Label>
+                  <Input 
+                    id="optionSymbol" 
+                    value={optionSymbol}
+                    onChange={(e) => setOptionSymbol(e.target.value.toUpperCase())}
+                    placeholder="AAPL220121C00150000"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="optionStockSymbol">Stock Symbol *</Label>
+                  <Input 
+                    id="optionStockSymbol" 
+                    value={optionStockSymbol}
+                    onChange={(e) => setOptionStockSymbol(e.target.value.toUpperCase())}
                     placeholder="AAPL"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="strikePrice">Strike Price ($)</Label>
-                  <Input
-                    id="strikePrice"
-                    type="number"
-                    value={optionFormData.strikePrice || ""}
-                    onChange={(e) => handleOptionFormChange(e, "strikePrice")}
-                    min={0.01}
-                    step={0.01}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiration">Expiration Date</Label>
-                  <Input
-                    id="expiration"
-                    type="date"
-                    value={optionFormData.expirationDate}
-                    onChange={(e) =>
-                      setOptionFormData({
-                        ...optionFormData,
-                        expirationDate: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="optionType">Option Type</Label>
-                  <Select
-                    value={optionFormData.optionType}
-                    onValueChange={handleOptionTypeChange}
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="optionType">Option Type *</Label>
+                  <select
+                    id="optionType"
+                    value={optionType}
+                    onChange={(e) => setOptionType(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <SelectTrigger id="optionType">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="call">Call</SelectItem>
-                      <SelectItem value="put">Put</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="call">Call</option>
+                    <option value="put">Put</option>
+                  </select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="marketPrice">Market Price ($)</Label>
-                  <Input
-                    id="marketPrice"
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="strikePrice">Strike Price *</Label>
+                  <Input 
+                    id="strikePrice" 
                     type="number"
-                    value={optionFormData.marketPrice || ""}
-                    onChange={(e) => handleOptionFormChange(e, "marketPrice")}
-                    min={0.01}
-                    step={0.01}
-                    placeholder="0.00"
+                    step="0.01"
+                    value={strikePrice}
+                    onChange={(e) => setStrikePrice(e.target.value)}
+                    placeholder="150.00"
                   />
                 </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="expirationDate">Expiration Date *</Label>
+                  <Input 
+                    id="expirationDate" 
+                    type="date"
+                    value={expirationDate}
+                    onChange={(e) => setExpirationDate(e.target.value)}
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="marketPrice">Market Price *</Label>
+                  <Input 
+                    id="marketPrice" 
+                    type="number"
+                    step="0.01"
+                    value={marketPrice}
+                    onChange={(e) => setMarketPrice(e.target.value)}
+                    placeholder="5.25"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="impliedVolatility">Implied Volatility (%)</Label>
+                  <Input 
+                    id="impliedVolatility" 
+                    type="number"
+                    step="0.01"
+                    value={impliedVolatility}
+                    onChange={(e) => setImpliedVolatility(e.target.value)}
+                    placeholder="25.5"
+                  />
+                </div>
+                
                 <div className="flex items-end">
-                  <Button onClick={addOptionData} className="w-full">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add
+                  <Button type="submit" className="w-full">
+                    <Plus className="mr-2 h-4 w-4" /> Add Option
                   </Button>
                 </div>
-              </div>
-              <div className="flex justify-between mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => handleImport("option")}
-                  disabled={!fileContent}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Import Data
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleExport("option")}
-                  disabled={optionData.length === 0}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Data
-                </Button>
-              </div>
+              </form>
             </CardContent>
           </Card>
-
+          
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Option Data</h2>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" /> Export
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Upload className="mr-2 h-4 w-4" /> Import
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Import Option Data</DialogTitle>
+                    <DialogDescription>
+                      Upload a JSON file containing option data.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Input 
+                    type="file" 
+                    accept=".json" 
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleImport(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  <DialogFooter>
+                    <DialogTrigger asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </DialogTrigger>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+          
           <Card>
-            <CardHeader>
-              <CardTitle>Option Data</CardTitle>
-              <CardDescription>
-                Your saved options contract information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {filteredOptionData.length > 0 ? (
-                <div className="border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Symbol</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Strike</TableHead>
-                        <TableHead>Expiration</TableHead>
-                        <TableHead>Market Price</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("symbol")}
+                    >
+                      Symbol {sortColumn === "symbol" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("stockSymbol")}
+                    >
+                      Stock {sortColumn === "stockSymbol" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("optionType")}
+                    >
+                      Type {sortColumn === "optionType" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("strikePrice")}
+                    >
+                      Strike {sortColumn === "strikePrice" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("expirationDate")}
+                    >
+                      Expiration {sortColumn === "expirationDate" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("marketPrice")}
+                    >
+                      Price {sortColumn === "marketPrice" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("impliedVolatility")}
+                    >
+                      IV {sortColumn === "impliedVolatility" && (
+                        <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                      )}
+                    </TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedOptionData.length > 0 ? (
+                    sortedOptionData.map((option) => (
+                      <TableRow key={option.id}>
+                        <TableCell className="font-medium">{option.symbol}</TableCell>
+                        <TableCell>{option.stockSymbol}</TableCell>
+                        <TableCell className={option.optionType === "call" ? "text-finance-green" : "text-finance-red"}>
+                          {option.optionType.toUpperCase()}
+                        </TableCell>
+                        <TableCell>${option.strikePrice.toFixed(2)}</TableCell>
+                        <TableCell>{option.expirationDate}</TableCell>
+                        <TableCell>${option.marketPrice.toFixed(2)}</TableCell>
+                        <TableCell>
+                          {option.impliedVolatility ? `${(option.impliedVolatility * 100).toFixed(1)}%` : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredOptionData.map((option) => (
-                        <TableRow key={option.id}>
-                          <TableCell className="font-medium">
-                            {option.stockSymbol}
-                          </TableCell>
-                          <TableCell>
-                            {option.optionType === "call" ? "Call" : "Put"}
-                          </TableCell>
-                          <TableCell>
-                            ${option.strikePrice.toFixed(2)}
-                          </TableCell>
-                          <TableCell>{option.expirationDate}</TableCell>
-                          <TableCell>
-                            ${option.marketPrice.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeOptionData(option.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  {searchTerm ?
-                    "No matching option data found" :
-                    "No option data available. Add some data above."
-                  }
-                </div>
-              )}
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                        No option data available. Add some options above.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
